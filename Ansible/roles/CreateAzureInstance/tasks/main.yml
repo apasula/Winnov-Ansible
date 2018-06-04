@@ -1,0 +1,66 @@
+- name: Create virtual network
+  azure_rm_virtualnetwork:
+    resource_group: "{{ resource_group }}"
+    name: VNET-Yale-SOM
+    address_prefixes: "10.6.132.0/22"
+
+- name: Add subnet
+  azure_rm_subnet:
+    resource_group: "{{ resource_group }}"
+    name: Subnet1
+    address_prefix: "10.6.132.0/24"
+    virtual_network: VNET-Yale-SOM
+
+- name: Create public IP address
+  azure_rm_publicipaddress:
+    resource_group: "{{ resource_group }}"
+    allocation_method: Static
+    name: myPublicIP
+  register: out
+- debug: var=out
+
+- name: Add created new instance to Ansible host group
+  add_host:
+    hostname: "{{ out.state.ip_address }}"
+    groupname: AzureVM
+  register: out
+- debug: var=out
+    
+#- name: Create Network Security Group that allows SSH
+#  azure_rm_securitygroup:
+#    resource_group: "{{ resource_group }}"
+#    name: Ansible-Test
+#    rules:
+#    - name: SSH
+#      protocol: Tcp
+#      destination_port_range: 22
+#      access: Allow
+#      priority: 1001
+#      direction: Inbound
+
+- name: Create virtual network inteface card
+  azure_rm_networkinterface:
+    resource_group: "{{ resource_group }}"
+    name: Ansible-Test123
+    virtual_network: VNET-Yale-SOM
+    subnet: Subnet1
+    public_ip_name: myPublicIP
+    security_group: VNET-Yale-SOM-RG
+
+- name: Create VM
+  azure_rm_virtualmachine:
+    resource_group: "{{ resource_group }}"
+    name: Ansible01vm
+    vm_size: Standard_D1
+    network_interfaces: Ansible-Test123
+    admin_username: anirudh
+    ssh_password_enabled: false
+    ssh_public_keys:
+      - path: /home/anirudh/.ssh/authorized_keys
+     #Insert user public key below, from ~/.ssh/id_rsa.pub
+        key_data: "ssh-rsa AAAAB3NzaC1yc2EAAAADAQABAAABAQDZlrXRmpCEqNJ7XP3lAki0qujvKXlrTx7q8Raa8XIhtaJYSnMbrWc3mv42iNhTIVfd6jhdysZzdcgYkFEVg4v9gEXisafN3QDH/ciSOdYJTiw5U4w8IOzY+wRzUl2caVR+l9AW47DWvJqsDScfD4p8YZ5M2rbRxwIfeO37BC7t0IHh1rbzDMkRoVl9PVI08fIUODkfXGr1BqTtBcA52muNG/gyrZKwGcxZ7fdRcmZWM9b00bkWmzz7NWFGXC2pERwGTr61dCxBPc1aJY6uqc66NXVL2KBwAx6z9vnKsyri0Mcu6tfBYf8wrW0wjBhJusiWLdWNG3qFyXu7XeP8Mk/5 root@Winnov-Test"
+    image:
+      offer: UbuntuServer
+      publisher: Canonical
+      sku: '16.04-LTS'
+      version: latest

@@ -1,0 +1,15 @@
+---
+- hosts: localhost
+  connection: local
+  gather_facts: no
+  vars:
+    #DownloadPath: "/tmp/env/"
+  roles:
+  - { role: CreateAzureInstance, ReqSetup=="AzureSetup" or when: ReqSetup=="CreateInstance" }
+ 
+- hosts: AzureVM
+  gather_facts: no
+  roles:
+  - { role: InstallDocker, when: ReqSetup=="AzureSetup" or ReqSetup=="Docker"}
+  - { role: SetupWinnov, when: ReqSetup=="AzureSetup" or ReqSetup=="Winnov" }
+
